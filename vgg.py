@@ -1,23 +1,24 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from collections import OrderedDict
 
-class VGG(nn.Module, neck, classes, shape):  
+
+class Build(nn.Module):  
     #neck : VGG13, 16... 
     #classes : number of class
     #shape : image shape
 
-    def __init__(self):
-        super(self).__init__()
+    def __init__(self, neck, classes, shape):
+        super().__init__()
         self.neck = neck
-        self.classifier = nn.Sequential(OrderDict([
-                            ("l1", nn.Linear(512 * shape[0] * shape[1] / 1024, 4096))
-                            ("c_act1", nn.ReLU(inplace = True))
-                            ("l2", nn.Linear(4096, 4096))
-                            ("c_act2", nn.ReLU(inplace = True))
-                            ("l3", nn.Linear(4096, classes)))
-                            ])
+        self.classifier = nn.Sequential(OrderedDict([
+                            ("l1", nn.Linear(512 * shape[0] * shape[1] // 1024, 4096)),
+                            ("c_act1", nn.ReLU(inplace = True)),
+                            ("l2", nn.Linear(4096, 4096)),
+                            ("c_act2", nn.ReLU(inplace = True)),
+                            ("l3", nn.Linear(4096, classes))
+                            ]))
+                                        
     def forward(self, x):
         x = self.neck(x)
         x = torch.flatten(x, 1)
@@ -51,5 +52,17 @@ def convLayer(cfg, in_channel, BN = True):
         bn += 1
         layer.append((name, nn.BatchNorm2d(dim)))
         layer.append((name2, nn.ReLU(inplace = True)))
-    return nn.Sequential(OrderdDict(layer))              #model with layers' name
+    return nn.Sequential(OrderedDict(layer))              #model with layers' name
 
+class VGG():
+    def net(self, model, classes, shape, channel = 3, BN = True):
+        cfgs = {
+                'vgg11': [64, 'P', 128, 'P', 256, 256, 'P', 512, 512, 'P', 512, 512, 'P'],
+                'vgg13': [64, 64, 'P', 128, 128, 'P', 256, 256, 'P', 512, 512, 'P', 512, 512, 'P'],
+                'vgg16': [64, 64, 'P', 128, 128, 'P', 256, 256, 256, 'P', 512, 512, 512, 'P', 512, 512, 512, 'P'],
+                'vgg19': [64, 64, 'P', 128, 128, 'P', 256, 256, 256, 256, 'P', 512, 512, 512, 512, 'P', 512, 512, 512, 512, 'P']
+                }
+        cfg = cfgs[model]
+        neck = convLayer(cfg, channel, BN)
+        nn = Build(neck, classes, shape)
+        return nn
